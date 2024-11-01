@@ -28,11 +28,6 @@ function M.setup()
         desc = "获取当前窗口的 IME 控件句柄",
         callback = function()
             ime_hwnd = imm32.ImmGetDefaultIMEWnd(user32.GetForegroundWindow())
-            if ime_hwnd == 0 then
-                vim.notify("未能获取到 IME 窗口句柄", vim.log.levels.ERROR)
-            else
-                vim.notify("成功获取到 IME 窗口句柄: " .. tostring(ime_hwnd), vim.log.levels.DEBUG)
-            end
         end,
     })
 
@@ -44,42 +39,24 @@ function M.setup()
 
     local function set_ime_mode(mode)
         if not ime_hwnd or ime_hwnd == 0 then
-            vim.notify("IME 窗口句柄无效，无法设置 IME 模式", vim.log.levels.WARN)
             return nil
         end
-        local result = user32.SendMessageA(ime_hwnd, WM_IME_CONTROL, IMC_SETCONVERSIONMODE, mode)
-        if result == 0 then
-            vim.notify("设置 IME 模式失败", vim.log.levels.ERROR)
-        else
-            vim.notify("成功设置 IME 模式: " .. mode, vim.log.levels.DEBUG)
-        end
+        return user32.SendMessageA(ime_hwnd, WM_IME_CONTROL, IMC_SETCONVERSIONMODE, mode)
     end
 
     local function get_ime_mode()
         if not ime_hwnd or ime_hwnd == 0 then
-            vim.notify("IME 窗口句柄无效，无法获取 IME 模式", vim.log.levels.WARN)
             return nil
         end
-        local mode = user32.SendMessageA(ime_hwnd, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, 0)
-        if mode == 0 then
-            vim.notify("获取 IME 模式失败", vim.log.levels.ERROR)
-        else
-            vim.notify("当前 IME 模式: " .. mode, vim.log.levels.DEBUG)
-        end
-        return mode
+        return user32.SendMessageA(ime_hwnd, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, 0)
     end
 
-    -- 在退出插入或命令行模式时切换到英文模式
     vim.api.nvim_create_autocmd({ "InsertLeave", "CmdlineLeave" }, {
         group = ime_group,
         desc = "在退出插入或命令行模式时切换到英文模式",
         callback = function()
-            local current_mode = get_ime_mode()
-            if current_mode == ime_mode_ch then
+            if ime_mode_ch == get_ime_mode() then
                 set_ime_mode(ime_mode_en)
-                vim.notify("切换到英文输入法", vim.log.levels.INFO)
-            else
-                vim.notify("当前 IME 模式不是中文，无需切换", vim.log.levels.DEBUG)
             end
         end,
     })
